@@ -1,0 +1,351 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<link rel="apple-touch-icon" href="icon.png">
+<link rel="icon" href="icon.png">
+<meta name="apple-mobile-web-app-title" content="LottoPick">
+<meta name="theme-color" content="#c8322a">
+<title>LottoPick 樂透選號</title>
+<meta name="apple-mobile-web-app-capable" content="yes">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Semi+Condensed:wght@500;700&family=Noto+Sans+TC:wght@400;500;700&display=swap">
+<style>
+html{-webkit-text-size-adjust:100%}
+body{margin:0}
+:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+/* Layout: one narrow column like a betting slip; controls on top, balls below, records folded underneath */
+:root{
+  --bg:#eef1f5; --card:#ffffff; --fg:#1a2130; --muted:#5e6878; --line:#d9dee6;
+  --accent:#c8322a; --accent-fg:#ffffff; --ball:#f2a116; --ball-ink:#5a3300;
+  --ball2:#d23a32; --fresh:#fff2a8; --fresh-ink:#5c4a00; --hot:#ffe2b8; --chip:#e4e8ef;
+  --f-body:"Noto Sans TC","PingFang TC","Heiti TC","Microsoft JhengHei",system-ui,sans-serif;
+  --f-num:"Barlow Semi Condensed","Arial Narrow",system-ui,sans-serif;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#12161d; --card:#1b212b; --fg:#e8ecf2; --muted:#9aa4b3; --line:#2d3541;
+  --accent:#e2493f; --accent-fg:#ffffff; --ball:#f2a116; --ball-ink:#3d2300;
+  --ball2:#e2493f; --fresh:#4a4210; --fresh-ink:#fff1a6; --hot:#4a3518; --chip:#262e3a; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#12161d; --card:#1b212b; --fg:#e8ecf2; --muted:#9aa4b3; --line:#2d3541;
+  --accent:#e2493f; --accent-fg:#ffffff; --ball:#f2a116; --ball-ink:#3d2300;
+  --ball2:#e2493f; --fresh:#4a4210; --fresh-ink:#fff1a6; --hot:#4a3518; --chip:#262e3a; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--f-body);font-size:15px;line-height:1.5;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:12px 32px}
+.wrap{max-width:720px;margin:0 auto;display:flex;flex-direction:column;gap:14px}
+header{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px}
+h1{font-size:1.35rem;margin:0;letter-spacing:.02em;text-wrap:balance}
+h1 small{font-weight:400;color:var(--muted);font-size:.8rem;margin-left:6px}
+.seg{display:inline-flex;background:var(--chip);border-radius:999px;padding:3px}
+.seg button{border:0;background:transparent;color:var(--fg);font:inherit;font-weight:700;padding:7px 16px;border-radius:999px;cursor:pointer}
+.seg button[aria-pressed="true"]{background:var(--accent);color:var(--accent-fg)}
+.meta{color:var(--muted);font-size:.82rem;margin-top:-6px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px}
+.controls{display:grid;grid-template-columns:1fr 1fr;gap:10px 12px}
+.controls label{display:flex;flex-direction:column;gap:4px;font-size:.78rem;color:var(--muted);letter-spacing:.04em;min-width:0}
+select{font:inherit;font-size:1rem;color:var(--fg);background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:9px 10px;width:100%}
+.stepper{display:flex;align-items:center;border:1px solid var(--line);border-radius:10px;background:var(--bg);overflow:hidden}
+.stepper button{border:0;background:transparent;color:var(--fg);font-size:1.3rem;width:44px;height:42px;cursor:pointer}
+.stepper output{flex:1;text-align:center;font-family:var(--f-num);font-weight:700;font-size:1.3rem}
+.go{grid-column:1/-1;border:0;border-radius:12px;background:var(--accent);color:var(--accent-fg);font:inherit;font-weight:700;font-size:1.15rem;padding:14px;cursor:pointer;letter-spacing:.06em}
+.go:disabled{opacity:.6}
+button:focus-visible,select:focus-visible,summary:focus-visible{outline:3px solid var(--ball);outline-offset:2px}
+.banner{background:var(--fresh);color:var(--fresh-ink);border-radius:14px;padding:12px 14px;display:flex;flex-direction:column;gap:6px}
+.banner b{font-size:1rem}
+.banner ul{margin:0;padding:0;list-style:none;font-family:var(--f-num);font-size:1rem}
+.banner button{align-self:flex-end;border:0;background:transparent;color:inherit;font:inherit;font-weight:700;text-decoration:underline;cursor:pointer}
+.sec-h{display:flex;justify-content:space-between;align-items:baseline;gap:8px;margin:0 0 8px}
+.sec-h h2{font-size:1rem;margin:0}
+.ghost{border:1px solid var(--line);background:transparent;color:var(--fg);font:inherit;font-size:.85rem;padding:5px 12px;border-radius:999px;cursor:pointer}
+.ghost:disabled{opacity:.45}
+.picks{display:flex;flex-direction:column}
+.pick{padding:10px 0;border-top:1px solid var(--line);display:flex;flex-direction:column;gap:6px}
+.pick:first-child{border-top:0}
+.row{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.idx{font-size:.78rem;color:var(--muted);width:2.6em}
+.ball{width:38px;height:38px;border-radius:50%;display:inline-grid;place-items:center;font-family:var(--f-num);font-weight:700;font-size:1.15rem;
+  background:radial-gradient(circle at 35% 30%,#fff6 0,transparent 45%),var(--ball);color:var(--ball-ink);font-variant-numeric:tabular-nums}
+.ball.s{background:radial-gradient(circle at 35% 30%,#fff5 0,transparent 45%),var(--ball2);color:#fff}
+.plus{color:var(--muted);margin:0 2px}
+.info{font-size:.8rem;color:var(--muted);padding-left:calc(2.6em + 6px);font-variant-numeric:tabular-nums}
+.info strong{color:var(--fg);font-weight:500}
+.empty{color:var(--muted);text-align:center;padding:18px 0}
+.hist{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums}
+.hist td{padding:7px 4px;border-top:1px solid var(--line);vertical-align:middle}
+.hist td.p{font-family:var(--f-num);font-size:.92rem;color:var(--muted);white-space:nowrap}
+.hist td.n{font-family:var(--f-num);font-weight:700;font-size:1.05rem;letter-spacing:.04em}
+.hist td.sp{font-family:var(--f-num);font-weight:700;color:var(--ball2);text-align:right}
+.hist tr.fresh td{background:var(--fresh);color:var(--fresh-ink)}
+.more{display:block;margin:10px auto 0}
+details>summary{cursor:pointer;font-weight:700;list-style:none;display:flex;justify-content:space-between}
+details>summary::after{content:"展開";color:var(--muted);font-weight:400;font-size:.85rem}
+details[open]>summary::after{content:"收合"}
+.tablebox{overflow-x:auto;margin-top:10px}
+.stats{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums;font-size:.9rem;min-width:420px}
+.stats th{font-size:.75rem;color:var(--muted);font-weight:500;text-align:right;padding:6px 4px;cursor:pointer;white-space:nowrap;user-select:none}
+.stats th:first-child,.stats td:first-child{text-align:left}
+.stats td{text-align:right;padding:5px 4px;border-top:1px solid var(--line);font-family:var(--f-num);font-size:1rem}
+.stats tr.hot td{background:var(--hot)}
+.stats .grp td{font-family:var(--f-body);font-size:.8rem;color:var(--muted);text-align:left;background:transparent}
+.note{font-size:.78rem;color:var(--muted)}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(18px + env(safe-area-inset-bottom,0px));background:var(--fg);color:var(--bg);padding:8px 16px;border-radius:999px;font-size:.88rem}
+@media (max-width:380px){.ball{width:34px;height:34px;font-size:1.05rem}}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>LottoPick<small>冷門組合選號</small></h1>
+    <div class="seg" role="group" aria-label="遊戲">
+      <button id="g649" aria-pressed="true">大樂透</button>
+      <button id="g638" aria-pressed="false">威力彩</button>
+    </div>
+  </header>
+  <div class="meta" id="meta"></div>
+
+  <div class="banner" id="banner" hidden></div>
+
+  <section class="card controls" aria-label="選號設定">
+    <label>分析範圍
+      <select id="range"><option value="99999">全部</option><option value="500">近 500 期</option><option value="300">近 300 期</option><option value="100">近 100 期</option><option value="50">近 50 期</option></select>
+    </label>
+    <label>選號策略
+      <select id="strategy"><option value="0">綜合加權（推薦）</option><option value="1">熱門號（常開出）</option><option value="2">冷門號（久未開出）</option><option value="3">純隨機</option></select>
+    </label>
+    <label style="grid-column:1/-1">組數
+      <div class="stepper"><button id="minus" aria-label="減少一組">−</button><output id="sets">5</output><button id="plus" aria-label="增加一組">＋</button></div>
+    </label>
+    <button class="go" id="go">產生號碼</button>
+  </section>
+
+  <section class="card">
+    <div class="sec-h"><h2>建議號碼</h2><button class="ghost" id="copy" disabled>複製號碼</button></div>
+    <div class="picks" id="picks"><div class="empty">按「產生號碼」，每組會從 3000 個候選挑出和歷史開獎重疊最少的組合</div></div>
+  </section>
+
+  <section class="card">
+    <div class="sec-h"><h2>歷屆開獎</h2><span class="note" id="histNote"></span></div>
+    <table class="hist"><tbody id="hist"></tbody></table>
+    <button class="ghost more" id="more">顯示更多</button>
+  </section>
+
+  <section class="card">
+    <details id="statsBox">
+      <summary>號碼統計</summary>
+      <p class="note">點欄位標題排序；黃底是權重最高的號碼。</p>
+      <div class="tablebox"><table class="stats" id="stats"></table></div>
+    </details>
+  </section>
+
+  <p class="note" id="odds"></p>
+</div>
+<div class="toast" id="toast" hidden></div>
+
+<script>
+const GAMES = {
+  "649": {name:"大樂透", max:49, smax:0, sp:"特別號", odds:13983816, days:"每週二、五開獎"},
+  "638": {name:"威力彩", max:38, smax:8, sp:"第二區", odds:22085448, days:"每週一、四開獎"}
+};
+const RECENT_N = 30, CAND = 3000;
+const $ = id => document.getElementById(id);
+const pad = n => String(n).padStart(2, "0");
+const pc = x => { x = x - ((x >>> 1) & 0x55555555); x = (x & 0x33333333) + ((x >>> 2) & 0x33333333); return (((x + (x >>> 4)) & 0x0F0F0F0F) * 0x01010101) >>> 24; };
+function mask(nums){ let lo = 0, hi = 0; for (const n of nums) { if (n <= 31) lo |= 1 << (n - 1); else hi |= 1 << (n - 32); } return [lo >>> 0, hi >>> 0]; }
+
+const DATA = {};
+function build(RAW){ for (const k of ["649","638"]) DATA[k] = (RAW[k]||[]).map(r => {
+  const n = r.slice(2, 8), d = String(r[1]);
+  const [lo, hi] = mask(n);
+  return {p:r[0], d:`${d.slice(0,4)}/${d.slice(4,6)}/${d.slice(6,8)}`, n, s:r[8], lo, hi, key:n.join(",")};
+}); }
+
+function store(get, key, val){ try { if (get) return localStorage.getItem(key); localStorage.setItem(key, val); } catch(e) { return null; } }
+
+class Analysis {
+  constructor(g, all, range, strategy){
+    this.g = g; this.all = all; this.strategy = strategy;
+    this.draws = all.slice(0, range);
+    this.main = this.count(g.max, this.draws.map(d => d.n));
+    this.second = g.smax ? this.count(g.smax, this.draws.map(d => [d.s])) : null;
+    const sums = this.draws.map(d => d.n.reduce((a,b)=>a+b,0)).sort((a,b)=>a-b);
+    this.sumLo = 0; this.sumHi = 0;
+    if (sums.length) { this.sumLo = sums[Math.floor(sums.length/10)]; this.sumHi = sums[Math.floor((sums.length-1)*9/10)]; }
+    this.weigh(this.main, 6);
+    if (this.second) this.weigh(this.second, 1);
+  }
+  count(max, list){
+    const s = Array.from({length:max+1}, (_, n) => ({n, count:0, recent:0, miss:-1, weight:0}));
+    let i = 0;
+    for (const nums of list) {
+      for (const n of nums) { if (n < 1 || n > max) continue; const st = s[n]; st.count++; if (i < RECENT_N) st.recent++; if (st.miss < 0) st.miss = i; }
+      i++;
+    }
+    for (const st of s) if (st.miss < 0) st.miss = i;
+    return s;
+  }
+  weigh(s, perDraw){
+    const nums = s.slice(1);
+    const avg = f => nums.reduce((a,x)=>a+f(x),0)/nums.length;
+    const mc = Math.max(avg(x=>x.count),1e-9), mr = Math.max(avg(x=>x.recent),1e-9), gap = nums.length/perDraw;
+    for (const x of nums) {
+      const f = x.count/mc, r = x.recent/mr, o = Math.min(x.miss/gap, 3);
+      const w = this.strategy===0 ? 0.45*f+0.35*r+0.2*o : this.strategy===1 ? Math.pow(0.5*f+0.5*r,2) : this.strategy===2 ? Math.pow(0.3+o,2) : 1;
+      x.weight = Math.max(w, 0.05);
+    }
+    const m = avg(x=>x.weight);
+    for (const x of nums) x.weight /= m;
+  }
+  sample(s, k){
+    const pool = s.slice(1), res = [];
+    for (let i = 0; i < k; i++) {
+      let r = Math.random() * pool.reduce((a,x)=>a+x.weight,0), j = 0;
+      for (; j < pool.length-1; j++) { r -= pool[j].weight; if (r < 0) break; }
+      res.push(pool[j].n); pool.splice(j,1);
+    }
+    return res.sort((a,b)=>a-b);
+  }
+  reasonable(nums, picks, past){
+    const sum = nums.reduce((a,b)=>a+b,0), odd = nums.filter(n=>n%2===1).length;
+    if (this.sumHi > 0 && (sum < this.sumLo || sum > this.sumHi)) return false;
+    if (odd < 2 || odd > 4) return false;
+    for (let i = 2; i < nums.length; i++) if (nums[i]===nums[i-1]+1 && nums[i-1]===nums[i-2]+1) return false;
+    if (past.has(nums.join(","))) return false;
+    return picks.every(p => p.nums.filter(n => nums.includes(n)).length <= 3);
+  }
+  make(nums, second){
+    const [lo, hi] = mask(nums); let hit3 = 0, best = 0;
+    for (const d of this.all) { const h = pc(lo & d.lo) + pc(hi & d.hi); if (h >= 3) hit3++; if (h > best) best = h; }
+    return {nums, second, score:nums.reduce((a,n)=>a+this.main[n].weight,0)/6, sum:nums.reduce((a,b)=>a+b,0), odd:nums.filter(n=>n%2===1).length, hit3, best};
+  }
+  generate(count){
+    const picks = [], past = new Set(this.all.map(d=>d.key));
+    for (let k = 0; k < count; k++) {
+      let best = null;
+      for (let c = 0; c < CAND; c++) {
+        let nums = this.sample(this.main, 6);
+        for (let t = 0; t < 3000 && this.strategy !== 3 && !this.reasonable(nums, picks, past); t++) nums = this.sample(this.main, 6);
+        const second = this.second ? this.sample(this.second, 1)[0] : 0;
+        const p = this.make(nums, second);
+        if (!best || p.best < best.best || (p.best === best.best && p.hit3 < best.hit3)) best = p;
+      }
+      picks.push(best);
+    }
+    return picks;
+  }
+}
+
+let gk = store(true, "lp-game") === "638" ? "638" : "649";
+let sets = 5, picks = [], an = null, histShown = 20, fresh = new Set(), sortCol = 0, sortDesc = false;
+
+function setGame(k){
+  gk = k; store(false, "lp-game", k);
+  $("g649").setAttribute("aria-pressed", k==="649"); $("g638").setAttribute("aria-pressed", k==="638");
+  const g = GAMES[k], all = DATA[k];
+  $("meta").textContent = `資料到 ${all[0].d}（第 ${all[0].p} 期），共 ${all.length} 期・${g.days}` + (CHECKED ? `・${CHECKED} 自動檢查` : "");
+  $("odds").textContent = `提醒：每期開獎都是獨立隨機，任何一組號碼中頭獎機率都一樣（${g.name}約 1/${g.odds.toLocaleString()}）。挑冷門組合不會提高中獎率，只是萬一中了，可能比較少人跟你分獎。僅供參考娛樂，請理性購買。`;
+  checkFresh();
+  picks = []; renderPicks(); histShown = 20; renderHist(); analyze();
+}
+
+function checkFresh(){
+  const all = DATA[gk], key = "lp-seen-" + gk, seen = Number(store(true, key)) || 0;
+  const news = seen ? all.filter(d => d.p > seen) : [];
+  fresh = new Set(news.map(d => d.p));
+  const b = $("banner");
+  if (!news.length) { b.hidden = true; if (!seen) store(false, key, all[0].p); return; }
+  const g = GAMES[gk];
+  b.innerHTML = `<b>${g.name}新增 ${news.length} 期開獎</b><ul>` +
+    news.slice(0, 10).map(d => `<li>第 ${d.p} 期　${d.d}　${d.n.map(pad).join(" ")}　${g.sp} ${pad(d.s)}</li>`).join("") +
+    (news.length > 10 ? `<li>…另有 ${news.length - 10} 期</li>` : "") + `</ul><button id="seen">知道了</button>`;
+  b.hidden = false;
+  $("seen").onclick = () => { store(false, key, all[0].p); b.hidden = true; fresh = new Set(); renderHist(); };
+}
+
+function analyze(){ an = new Analysis(GAMES[gk], DATA[gk], Number($("range").value), Number($("strategy").value)); renderStats(); }
+
+function ballRow(p, g, i){
+  return `<div class="row"><span class="idx">第${i+1}組</span>${p.nums.map(n=>`<span class="ball">${pad(n)}</span>`).join("")}` +
+    (g.smax ? `<span class="plus">＋</span><span class="ball s">${pad(p.second)}</span>` : "") + `</div>`;
+}
+function renderPicks(rolling){
+  const g = GAMES[gk], box = $("picks");
+  if (!picks.length) { box.innerHTML = `<div class="empty">按「產生號碼」，每組會從 3000 個候選挑出和歷史開獎重疊最少的組合</div>`; $("copy").disabled = true; return; }
+  box.innerHTML = picks.map((p, i) => `<div class="pick">${ballRow(p, g, i)}` + (rolling ? `<div class="info">&nbsp;</div>` :
+    `<div class="info">回測 ${DATA[gk].length} 期：中 3 個以上 <strong>${p.hit3}</strong> 次，最多中 <strong>${p.best}</strong> 個<br>權重 ${p.score.toFixed(2)}・和值 ${p.sum}・奇偶 ${p.odd}:${6-p.odd}</div>`) + `</div>`).join("");
+  $("copy").disabled = !!rolling;
+}
+
+function renderHist(){
+  const g = GAMES[gk], all = DATA[gk];
+  $("hist").innerHTML = all.slice(0, histShown).map(d =>
+    `<tr class="${fresh.has(d.p) ? "fresh" : ""}"><td class="p">${d.p}<br>${d.d}</td><td class="n">${d.n.map(pad).join(" ")}</td><td class="sp">${pad(d.s)}</td></tr>`).join("");
+  $("histNote").textContent = `右側為${g.sp}`;
+  $("more").hidden = histShown >= all.length;
+}
+
+function renderStats(){
+  const cols = ["號碼","次數","出現率",`近${RECENT_N}期`,"遺漏","權重"];
+  const draws = Math.max(an.draws.length, 1);
+  const group = (s, title, hotN) => {
+    const top = an.strategy === 3 ? new Set() : new Set(s.slice(1).slice().sort((a,b)=>b.weight-a.weight).slice(0, hotN).map(x=>x.n));
+    const rows = s.slice(1).map(x => ({x, v:[x.n, x.count, x.count*100/draws, x.recent, x.miss, x.weight]}));
+    rows.sort((a,b) => { let c = a.v[sortCol]-b.v[sortCol]; if (!c) c = a.v[0]-b.v[0]; return sortDesc ? -c : c; });
+    return `<tr class="grp"><td colspan="6">${title}</td></tr>` + rows.map(r =>
+      `<tr class="${top.has(r.x.n) ? "hot" : ""}"><td>${pad(r.x.n)}</td><td>${r.x.count}</td><td>${r.v[2].toFixed(1)}%</td><td>${r.x.recent}</td><td>${r.x.miss}</td><td>${r.x.weight.toFixed(2)}</td></tr>`).join("");
+  };
+  $("stats").innerHTML = `<thead><tr>${cols.map((c,i)=>`<th data-i="${i}">${c}${i===sortCol ? (sortDesc ? " ↓" : " ↑") : ""}</th>`).join("")}</tr></thead><tbody>` +
+    group(an.main, GAMES[gk].smax ? `第一區（選 6 個，1～38）・分析 ${an.draws.length} 期` : `一般號（選 6 個，1～49）・分析 ${an.draws.length} 期`, 10) +
+    (an.second ? group(an.second, "第二區（選 1 個，1～8）", 2) : "") + `</tbody>`;
+  $("stats").querySelectorAll("th").forEach(th => th.onclick = () => {
+    const i = Number(th.dataset.i); sortDesc = i === sortCol ? !sortDesc : i !== 0; sortCol = i; renderStats();
+  });
+}
+
+function generate(){
+  const btn = $("go"); btn.disabled = true; btn.textContent = "挑選中…";
+  setTimeout(() => {
+    const result = an.generate(sets), g = GAMES[gk];
+    let tick = 0;
+    const timer = setInterval(() => {
+      if (++tick < 14) {
+        picks = result.map(p => ({...p, nums: Array.from({length:g.max},(_,i)=>i+1).sort(()=>Math.random()-.5).slice(0,6).sort((a,b)=>a-b), second: g.smax ? 1+Math.floor(Math.random()*g.smax) : 0}));
+        renderPicks(true); return;
+      }
+      clearInterval(timer); picks = result; renderPicks(false);
+      btn.disabled = false; btn.textContent = "產生號碼";
+    }, 60);
+  }, 30);
+}
+
+function toast(msg){ const t = $("toast"); t.textContent = msg; t.hidden = false; clearTimeout(toast.h); toast.h = setTimeout(()=>t.hidden = true, 1800); }
+
+function copyPicks(){
+  const g = GAMES[gk];
+  const text = picks.map((p,i) => `${g.name} 第${i+1}組：${p.nums.map(pad).join(" ")}` + (g.smax ? `  第二區 ${pad(p.second)}` : "")).join("\n");
+  const fallback = () => { const ta = document.createElement("textarea"); ta.value = text; document.body.appendChild(ta); ta.select(); try { document.execCommand("copy"); toast("已複製"); } catch(e) { toast("請長按選取文字複製"); } ta.remove(); };
+  try { navigator.clipboard.writeText(text).then(() => toast(`已複製 ${picks.length} 組號碼`), fallback); } catch(e) { fallback(); }
+}
+
+$("g649").onclick = () => setGame("649");
+$("g638").onclick = () => setGame("638");
+$("range").onchange = analyze;
+$("strategy").onchange = analyze;
+$("minus").onclick = () => { sets = Math.max(1, sets-1); $("sets").textContent = sets; };
+$("plus").onclick = () => { sets = Math.min(10, sets+1); $("sets").textContent = sets; };
+$("go").onclick = generate;
+$("copy").onclick = copyPicks;
+$("more").onclick = () => { histShown += 50; renderHist(); };
+let CHECKED = "";
+fetch("data.json?t=" + Date.now(), {cache:"no-store"}).then(r => { if (!r.ok) throw new Error(r.status); return r.json(); }).then(raw => {
+  build(raw);
+  if (raw.checked) { const t = new Date(raw.checked); CHECKED = `${t.getMonth()+1}/${t.getDate()} ${pad(t.getHours())}:${pad(t.getMinutes())}`; }
+  setGame(gk);
+}).catch(e => { $("meta").textContent = "讀不到開獎資料（data.json），請稍後重新整理。"; });
+</script>
+
+</body>
+</html>
